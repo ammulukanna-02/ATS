@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResuMatch AI - Professional ATS Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- PDF.js for real-world PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .hidden-section { display: none; }
+        .loader { border-top-color: #2563eb; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <i class="fas fa-robot text-xl"></i>
+                </div>
+                <span class="font-bold text-xl tracking-tight">ResuMatch<span class="text-blue-600">.AI</span></span>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Enterprise Engine</p>
+                <p class="text-xs font-semibold text-blue-600">v4.2 Precision Parser</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-10">
+        
+        <div class="space-y-10">
+            <!-- 1. Job Description Input -->
+            <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold flex items-center gap-3 text-slate-800">
+                        <span class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-sm">1</span>
+                        Target Job Description
+                    </h2>
+                    <span class="text-[10px] bg-slate-100 px-2 py-1 rounded-full text-slate-500 font-bold uppercase">Required for Match</span>
+                </div>
+                <textarea id="jobDesc" rows="5" 
+                    class="w-full p-4 border border-slate-200 rounded-xl focus:outline-none text-sm leading-relaxed placeholder:text-slate-400 resize-none"
+                    placeholder="Paste the job requirements here... The parser will automatically extract key skills and requirements for comparison."></textarea>
+            </section>
+
+            <!-- 2. Resume Upload -->
+            <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold flex items-center gap-3 text-slate-800">
+                        <span class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-sm">2</span>
+                        Resume Upload
+                    </h2>
+                    <span class="text-[10px] bg-blue-50 px-2 py-1 rounded-full text-blue-600 font-bold uppercase">PDF Supported</span>
+                </div>
+                
+                <div id="dropZone" class="group relative border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer">
+                    <input type="file" id="fileInput" class="hidden" accept=".pdf,.txt">
+                    <div id="uploadPrompt" class="space-y-4">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                            <i class="fas fa-file-upload text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-slate-700">Drag your resume here</p>
+                            <p class="text-xs text-slate-400 mt-1">Upload PDF for automated parsing</p>
+                        </div>
+                    </div>
+                    <div id="fileStatus" class="hidden-section space-y-3">
+                        <div class="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-sm font-semibold border border-green-100">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="fileName">resume.pdf</span>
+                        </div>
+                        <button id="removeBtn" class="block mx-auto text-xs text-slate-400 hover:text-red-500 transition-colors">Choose a different file</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Start Analysis Button -->
+            <div class="flex flex-col items-center gap-4">
+                <button id="analyzeBtn" class="group px-14 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-100 hover:shadow-blue-200 transition-all transform hover:-translate-y-1 flex items-center gap-3 disabled:opacity-50">
+                    <span id="btnText">Start Analysis</span>
+                    <i id="btnIcon" class="fas fa-search text-white/80"></i>
+                </button>
+                <p id="errorMsg" class="text-red-500 text-xs font-semibold hidden-section">Please provide both Job Description and Resume</p>
+            </div>
+        </div>
+
+        <!-- Dashboard / Results -->
+        <div id="resultsDashboard" class="hidden-section mt-16 animate-fade-in space-y-10">
+            <div class="border-t border-slate-200 pt-10">
+                <h3 class="text-2xl font-black text-slate-800 mb-8">Scan Intelligence Report</h3>
+            </div>
+
+            <!-- Main Score Metrics -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Circular Score -->
+                <div class="lg:col-span-1 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center flex flex-col items-center justify-center">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Overall ATS Score</p>
+                    <div class="relative w-40 h-40 flex items-center justify-center rounded-full border-[12px] border-slate-50 transition-all duration-500" id="scoreCircle">
+                        <span id="finalScore" class="text-5xl font-black text-slate-800">0%</span>
+                    </div>
+                    <p id="verdictText" class="mt-6 font-bold text-sm text-slate-600 px-4"></p>
+                </div>
+
+                <!-- Technical Breakdown -->
+                <div class="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h4 class="font-bold text-slate-800">Scanner Diagnostics</h4>
+                        <span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-1 rounded border border-blue-100 uppercase tracking-widest">Live Audit</span>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-2">
+                                <span class="text-slate-500 uppercase tracking-tight flex items-center gap-2">
+                                    <i class="fas fa-key text-blue-500"></i> Keyword Saturation
+                                </span>
+                                <span id="keywordScoreLabel" class="text-blue-600">0% Match</span>
+                            </div>
+                            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+                                <div id="keywordBar" class="h-full bg-blue-600 transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-2">Measures presence of skills required in the job description.</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs font-bold mb-2">
+                                <span class="text-slate-500 uppercase tracking-tight flex items-center gap-2">
+                                    <i class="fas fa-check-double text-emerald-500"></i> Formatting Integrity
+                                </span>
+                                <span id="formatScoreLabel" class="text-emerald-600">0% Pass</span>
+                            </div>
+                            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+                                <div id="formatBar" class="h-full bg-emerald-500 transition-all duration-1000 ease-out" style="width: 0%"></div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-2">Checks for contact info, word count, and impact-driven language.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Gaps & Strengths -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-4">
+                    <h5 class="text-sm font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                        <i class="fas fa-times-circle text-red-400"></i> Missing Keywords
+                    </h5>
+                    <div id="missingList" class="flex flex-wrap gap-2 min-h-[50px] p-4 bg-slate-100/50 rounded-2xl border border-dashed border-slate-200"></div>
+                </div>
+                <div class="space-y-4">
+                    <h5 class="text-sm font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
+                        <i class="fas fa-check-circle text-green-400"></i> Identified Strengths
+                    </h5>
+                    <div id="strengthList" class="flex flex-wrap gap-2 min-h-[50px] p-4 bg-slate-100/50 rounded-2xl border border-dashed border-slate-200"></div>
+                </div>
+            </div>
+
+            <!-- Actionable Advice -->
+            <div class="bg-slate-900 text-white p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-8 -bottom-8 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
+                <h4 class="text-xl font-bold mb-4 relative z-10 flex items-center gap-2">
+                    <i class="fas fa-magic text-blue-400"></i> Smart Optimization
+                </h4>
+                <ul id="adviceList" class="space-y-4 text-slate-300 text-sm relative z-10"></ul>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-10 text-center text-slate-400 text-xs">
+        Powered by ResuMatch Neural Engine &bull; Enterprise Grade Parsing
+    </footer>
+
+    <script>
+        // PDF.js Setup
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // Expanded Knowledge Base for Real-World Accuracy
+        const MASTER_SKILLS = [
+            // Tech
+            "python", "javascript", "react", "node.js", "node", "aws", "sql", "java", "typescript", "c++", "go", "docker", "kubernetes", "cloud", "api", "rest", "nosql", "postgres", "mongodb", "terraform", "ci/cd", "azure", "gcp", "html", "css", "linux", "git",
+            // Data
+            "machine learning", "data science", "data analysis", "tableau", "power bi", "pandas", "numpy", "pytorch", "tensorflow", "statistics",
+            // Soft & Business
+            "agile", "scrum", "project management", "product management", "leadership", "communication", "marketing", "sales", "design", "figma", "ui/ux", "strategic planning", "customer service", "negotiation", "problem solving", "time management", "mentoring"
+        ];
+
+        const ACTION_VERBS = ["managed", "developed", "led", "increased", "reduced", "optimized", "implemented", "engineered", "created", "spearheaded", "architected", "designed", "built", "launched", "delivered"];
+
+        // State
+        let extractedResumeText = "";
+
+        // Elements
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultsDashboard = document.getElementById('resultsDashboard');
+
+        // Parser
+        async function parsePDF(data) {
+            try {
+                const pdf = await pdfjsLib.getDocument({ data }).promise;
+                let text = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += content.items.map(item => item.str).join(" ");
+                }
+                return text;
+            } catch (err) {
+                console.error("PDF Parsing Error:", err);
+                return "";
+            }
+        }
+
+        // Logic Engine - Real World Accurate Simulation
+        function performAnalysis() {
+            const jd = document.getElementById('jobDesc').value.trim();
+            const resume = extractedResumeText.trim();
+
+            if (!jd || !resume) {
+                document.getElementById('errorMsg').classList.remove('hidden-section');
+                return;
+            }
+            document.getElementById('errorMsg').classList.add('hidden-section');
+
+            const jdLower = jd.toLowerCase();
+            const resumeLower = resume.toLowerCase();
+
+            // 1. Precise Keyword Extraction from JD
+            // We search for both single words and common two-word phrases (N-grams)
+            const matched = [];
+            const missing = [];
+
+            MASTER_SKILLS.forEach(skill => {
+                if (jdLower.includes(skill)) {
+                    if (resumeLower.includes(skill)) {
+                        matched.push(skill);
+                    } else {
+                        missing.push(skill);
+                    }
+                }
+            });
+
+            // 2. Formatting Audit
+            const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resume);
+            const hasPhone = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(resume);
+            const identifiedVerbs = ACTION_VERBS.filter(v => resumeLower.includes(v));
+            const wordCount = resume.split(/\s+/).length;
+
+            // 3. Scoring Matrix
+            // Keywords = 70%, Formatting/Integrity = 30%
+            let keywordScore = 0;
+            if (matched.length + missing.length > 0) {
+                keywordScore = (matched.length / (matched.length + missing.length)) * 70;
+            } else {
+                // If no skills found in JD, score based on general strength of resume
+                keywordScore = Math.min(matched.length * 10, 40) + 30;
+            }
+
+            const formatScore = ( (hasEmail?7.5:0) + (hasPhone?7.5:0) + (Math.min(identifiedVerbs.length, 5) * 1.5) + (wordCount > 400 ? 7.5 : (wordCount/400)*7.5) );
+            
+            const totalScore = Math.round(keywordScore + formatScore);
+
+            renderResults(totalScore, matched, missing, { hasEmail, hasPhone, verbCount: identifiedVerbs.length, wordCount });
+        }
+
+        function renderResults(score, matched, missing, audit) {
+            resultsDashboard.classList.remove('hidden-section');
+            resultsDashboard.scrollIntoView({ behavior: 'smooth' });
+
+            // Animate Score
+            document.getElementById('finalScore').innerText = score + '%';
+            document.getElementById('scoreCircle').style.borderColor = score > 80 ? '#10b981' : score > 60 ? '#f59e0b' : '#ef4444';
+            
+            // Diagnostics Bars
+            const kwPercent = Math.round((score / 100) * 100);
+            document.getElementById('keywordBar').style.width = kwPercent + '%';
+            document.getElementById('keywordScoreLabel').innerText = `${matched.length} Skills Found`;
+            
+            const integrityPercent = Math.round(((audit.hasEmail?25:0) + (audit.hasPhone?25:0) + (audit.verbCount >= 3 ? 25:0) + (audit.wordCount > 300 ? 25 : 10)));
+            document.getElementById('formatBar').style.width = integrityPercent + '%';
+            document.getElementById('formatScoreLabel').innerText = integrityPercent + '% Pass';
+
+            // Lists
+            document.getElementById('strengthList').innerHTML = matched.map(s => 
+                `<span class="px-3 py-1.5 bg-green-50 text-green-700 text-[10px] font-black border border-green-200 rounded-lg uppercase tracking-wider">${s}</span>`
+            ).join('') || '<p class="text-slate-400 text-xs italic">No matching skills found.</p>';
+
+            document.getElementById('missingList').innerHTML = missing.map(s => 
+                `<span class="px-3 py-1.5 bg-red-50 text-red-700 text-[10px] font-black border border-red-200 rounded-lg uppercase tracking-wider">${s}</span>`
+            ).join('') || '<p class="text-slate-400 text-xs italic">No major skill gaps detected.</p>';
+
+            // Verdict
+            document.getElementById('verdictText').innerText = score > 80 ? "Top-tier match. You are highly likely to pass automated filters." : 
+                                                              score > 60 ? "Solid match with minor gaps. Review the missing keywords." : 
+                                                              "Low compatibility. Your resume needs significant optimization for this JD.";
+
+            // Advice
+            const advice = [];
+            if (!audit.hasEmail || !audit.hasPhone) advice.push("Your <strong>Contact Information</strong> is missing or unreadable. ATS needs a plain-text email and phone.");
+            if (missing.length > 0) advice.push(`<strong>Key Missing Skills:</strong> Integrate "${missing[0]}" and "${missing[1] || 'related terms'}" naturally into your experience bullets.`);
+            if (audit.verbCount < 4) advice.push("Your bullets lack <strong>Action Verbs</strong>. Use words like 'Orchestrated' or 'Engineered' to quantify impact.");
+            if (audit.wordCount < 300) advice.push("Your <strong>Word Count</strong> is low. Expand on your achievements to provide more context for the parser.");
+            if (score < 70) advice.push("<strong>Tailoring Tip:</strong> Mirror the exact phrasing used in the Job Description for better semantic matching.");
+
+            document.getElementById('adviceList').innerHTML = advice.map(a => `<li class="flex items-start gap-3"><i class="fas fa-check text-blue-500 mt-1"></i> <span>${a}</span></li>`).join('');
+        }
+
+        // Event Handlers
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('uploadPrompt').classList.add('hidden-section');
+            document.getElementById('fileStatus').classList.remove('hidden-section');
+            document.getElementById('fileName').innerText = file.name;
+
+            if (file.type === "application/pdf") {
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    extractedResumeText = await parsePDF(typedarray);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                extractedResumeText = await file.text();
+            }
+        });
+
+        analyzeBtn.addEventListener('click', () => {
+            const originalIcon = document.getElementById('btnIcon').className;
+            document.getElementById('btnText').innerText = "Processing Intelligence...";
+            document.getElementById('btnIcon').className = "fas fa-circle-notch animate-spin text-white";
+            analyzeBtn.disabled = true;
+
+            setTimeout(() => {
+                performAnalysis();
+                document.getElementById('btnText').innerText = "Start Analysis";
+                document.getElementById('btnIcon').className = "fas fa-search text-white/80";
+                analyzeBtn.disabled = false;
+            }, 1800);
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        document.getElementById('removeBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.value = "";
+            extractedResumeText = "";
+            document.getElementById('uploadPrompt').classList.remove('hidden-section');
+            document.getElementById('fileStatus').classList.add('hidden-section');
+            resultsDashboard.classList.add('hidden-section');
+        });
+    </script>
+</body>
+</html>
